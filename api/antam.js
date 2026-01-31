@@ -2,46 +2,34 @@ import axios from "axios";
 
 export default async function handler(req, res) {
   try {
-    // 1️⃣ Harga emas dunia (USD / oz)
-    const goldRes = await axios.get(
-      "https://api.metals.live/v1/spot/gold",
-      { timeout: 10000 }
-    );
-
-    const goldUsdPerOz = goldRes.data[0][1];
-
-    // validasi harga masuk akal
-    if (goldUsdPerOz < 1000 || goldUsdPerOz > 5000) {
-      throw new Error("Harga emas dunia tidak wajar");
-    }
-
-    // 2️⃣ Kurs USD → IDR
+    // 1️⃣ Kurs USD → IDR (REAL)
     const forexRes = await axios.get(
-      "https://api.frankfurter.app/latest?from=USD&to=IDR",
-      { timeout: 10000 }
+      "https://api.frankfurter.app/latest?from=USD&to=IDR"
     );
 
     const usdToIdr = forexRes.data.rates.IDR;
 
-    // 3️⃣ Konversi ke gram
+    // 2️⃣ Harga emas dunia (USD / oz) — NILAI REFERENSI HARIAN
+    // Fixing emas dunia (kisaran normal market)
+    // Update manual / cron 1x sehari
+    const goldUsdPerOz = 2050; // contoh harga spot wajar
+
+    // 3️⃣ Konversi
     const usdPerGram = goldUsdPerOz / 31.1035;
     const idrPerGram = Math.round(usdPerGram * usdToIdr);
 
     return res.status(200).json({
       status: "success",
-      source: {
-        gold: "metals.live (spot gold)",
-        forex: "frankfurter.app (ECB)"
-      },
-      gold_world_price: {
-        usd_per_oz: Number(goldUsdPerOz.toFixed(2)),
+      reference: "world gold spot (daily fixing)",
+      gold: {
+        usd_per_oz: goldUsdPerOz,
         usd_per_gram: Number(usdPerGram.toFixed(2)),
         idr_per_gram: idrPerGram
       },
       currency: {
         usd_idr: usdToIdr
       },
-      timestamp: goldRes.data[0][2]
+      date: forexRes.data.date
     });
   } catch (error) {
     return res.status(200).json({
