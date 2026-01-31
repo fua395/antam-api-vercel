@@ -3,14 +3,14 @@ import axios from "axios";
 export default async function handler(req, res) {
   try {
     const response = await axios.get(
-      "https://api.exchangerate.host/latest?base=USD&symbols=IDR"
+      "https://api.frankfurter.app/latest?from=USD&to=IDR"
     );
 
     const rate = response.data.rates.IDR;
 
     return res.status(200).json({
       status: "success",
-      source: "exchangerate.host",
+      source: "frankfurter.app",
       base: "USD",
       target: "IDR",
       rate: rate,
