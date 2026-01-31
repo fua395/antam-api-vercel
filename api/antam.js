@@ -4,11 +4,16 @@ export default async function handler(req, res) {
   try {
     // 1️⃣ Harga emas dunia (USD / oz)
     const goldRes = await axios.get(
-      "https://api.metals.live/v1/spot/gold",
-      { timeout: 10000 }
+      "https://data-asg.goldprice.org/dbXRates/USD",
+      {
+        timeout: 10000,
+        headers: {
+          "User-Agent": "Mozilla/5.0"
+        }
+      }
     );
 
-    const goldUsdPerOz = goldRes.data[0][1];
+    const goldUsdPerOz = goldRes.data.items[0].xauPrice;
 
     // 2️⃣ Kurs USD → IDR
     const kursRes = await axios.get(
@@ -25,7 +30,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       status: "success",
       source: {
-        gold: "metals.live",
+        gold: "goldprice.org",
         forex: "frankfurter.app"
       },
       gold: {
@@ -35,8 +40,7 @@ export default async function handler(req, res) {
       },
       currency: {
         usd_idr: usdToIdr
-      },
-      timestamp: goldRes.data[0][2]
+      }
     });
   } catch (error) {
     return res.status(200).json({
