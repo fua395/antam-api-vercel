@@ -4,24 +4,24 @@ export default async function handler(req, res) {
   try {
     // 1️⃣ Harga emas dunia (USD / oz)
     const goldRes = await axios.get(
-      "https://data-asg.goldprice.org/dbXRates/USD",
-      {
-        timeout: 10000,
-        headers: {
-          "User-Agent": "Mozilla/5.0"
-        }
-      }
+      "https://api.metals.live/v1/spot/gold",
+      { timeout: 10000 }
     );
 
-    const goldUsdPerOz = goldRes.data.items[0].xauPrice;
+    const goldUsdPerOz = goldRes.data[0][1];
+
+    // validasi harga masuk akal
+    if (goldUsdPerOz < 1000 || goldUsdPerOz > 5000) {
+      throw new Error("Harga emas dunia tidak wajar");
+    }
 
     // 2️⃣ Kurs USD → IDR
-    const kursRes = await axios.get(
+    const forexRes = await axios.get(
       "https://api.frankfurter.app/latest?from=USD&to=IDR",
       { timeout: 10000 }
     );
 
-    const usdToIdr = kursRes.data.rates.IDR;
+    const usdToIdr = forexRes.data.rates.IDR;
 
     // 3️⃣ Konversi ke gram
     const usdPerGram = goldUsdPerOz / 31.1035;
@@ -30,22 +30,23 @@ export default async function handler(req, res) {
     return res.status(200).json({
       status: "success",
       source: {
-        gold: "goldprice.org",
-        forex: "frankfurter.app"
+        gold: "metals.live (spot gold)",
+        forex: "frankfurter.app (ECB)"
       },
-      gold: {
-        usd_per_oz: goldUsdPerOz,
+      gold_world_price: {
+        usd_per_oz: Number(goldUsdPerOz.toFixed(2)),
         usd_per_gram: Number(usdPerGram.toFixed(2)),
         idr_per_gram: idrPerGram
       },
       currency: {
         usd_idr: usdToIdr
-      }
+      },
+      timestamp: goldRes.data[0][2]
     });
   } catch (error) {
     return res.status(200).json({
       status: "fallback",
-      message: "Gagal mengambil data emas realtime",
+      message: "Gagal mengambil harga emas dunia",
       error: error.message
     });
   }
